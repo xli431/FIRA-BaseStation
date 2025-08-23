@@ -1,4 +1,3 @@
-// server.js
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
@@ -16,14 +15,14 @@ const io = new Server(server);
 let robotSocket = null;
 
 io.on('connection', (socket) => {
-    console.log('Klien terhubung:', socket.id);
+    console.log('connect:', socket.id);
 
     socket.on('telemetry_from_robot', (data) => {
         io.emit('telemetry_to_browser', data);
     });
 
     socket.on('register_robot', () => {
-        console.log(`Robot terdaftar dengan ID: ${socket.id}`);
+        console.log(`ID: ${socket.id}`);
         robotSocket = socket;
     });
 
@@ -32,7 +31,7 @@ io.on('connection', (socket) => {
             robotSocket.emit('command_to_robot', data);
             console.log(`Perintah dikirim ke robot:`, data);
         } else {
-            console.log('Perintah gagal: Robot tidak terhubung.');
+            console.log('Perintah gagal: Robot tidak terhubung');
         }
     });
     
@@ -48,7 +47,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('Klien terputus:', socket.id);
         if (robotSocket && socket.id === robotSocket.id) {
-            console.log('Robot terputus.');
+            console.log('Robot terputus');
             robotSocket = null;
         }
     });
