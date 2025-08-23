@@ -5,11 +5,11 @@ import TabButton from '../components/TabButton';
 import ParameterInput from '../components/ParameterInput';
 
 const PARAMETER_GROUPS = {
-    'Kontrol PID': ['kp', 'ki', 'kd'],
-    'Pengaturan Kecepatan': ['SPEED_NORMAL', 'SPEED_LAMBAT', 'SPEED_ZEBRA', 'KECEPATAN_AKSI', 'KECEPATAN_MUNDUR'],
-    'Pengaturan Kemudi (Servo)': ['STEER_TENGAH', 'MAX_KIRI', 'MAX_KANAN', 'STEER_PATAH_KANAN', 'STEER_HALUS_KIRI', 'LANGKAH_STEER_KANAN_HILANG'],
+    'PID': ['kp', 'ki', 'kd'],
+    'Kecepatan': ['SPEED_NORMAL', 'SPEED_LAMBAT', 'SPEED_ZEBRA', 'KECEPATAN_AKSI', 'KECEPATAN_MUNDUR'],
+    'Servo': ['STEER_TENGAH', 'MAX_KIRI', 'MAX_KANAN', 'STEER_PATAH_KANAN', 'STEER_HALUS_KIRI', 'LANGKAH_STEER_KANAN_HILANG'],
     'Logika Garis': ['toleransi_error_kiri', 'toleransi_error_kanan', 'koreksi_eror', 'LEBAR_JALUR'],
-    'Durasi Aksi (Detik)': ['DURASI_AKSI_KIRI', 'DURASI_AKSI_KANAN', 'DURASI_AKSI_LURUS'],
+    'Durasi': ['DURASI_AKSI_KIRI', 'DURASI_AKSI_KANAN', 'DURASI_AKSI_LURUS'],
     'Parameter Lain': ['alpha_derivative', 'alpha_servo', 'max_servo_change_per_frame', 'CONFIDENCE_THRESHOLD', 'AREA_MIN_CONE', 'JARAK_BERHENTI_RAMBU', 'JARAK_STOP_ZEBRA']
 };
 
