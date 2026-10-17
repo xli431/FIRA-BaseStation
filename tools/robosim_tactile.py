@@ -145,7 +145,19 @@ class EpisodeSource:
                     rectify=self._rectify, depth=self._depth)
 
 
-def make_page(sim, source, args):
+def tool_anchor(sim, arm=""):
+    """Where the arrow starts and how it is oriented: the arm's tool-centre point."""
+
+    def anchor():
+        pos, quat = sim.arm(arm).ee_pose(sim.state)
+        return pos, quat_xyzw_to_mat(quat)
+
+    return anchor
+
+
+def make_page(sim, source, args, anchor=None):
+    """``page(studio)`` adding the tactile panel and arrow. ``anchor()`` returns (position, rotation matrix)."""
+    anchor = anchor or tool_anchor(sim, args.arm)
     mount = rpy_to_mat(*args.mount_rpy)
     blank = np.zeros((int(args.img_width * 1.75), args.img_width, 3), np.uint8)
 
@@ -185,8 +197,8 @@ def make_page(sim, source, args):
                     handle.image = data[key]
                     shown[key] = data[key]
 
-            pos, quat = sim.arm(args.arm).ee_pose(sim.state)
-            vec = quat_xyzw_to_mat(quat) @ mount @ force[:3] * scale.value
+            pos, rot = anchor()
+            vec = rot @ mount @ force[:3] * scale.value
             norm = float(np.linalg.norm(vec))
             if norm > MAX_ARROW_M:
                 vec *= MAX_ARROW_M / norm

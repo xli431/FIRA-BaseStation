@@ -27,6 +27,14 @@ io.on('connection', (socket) => {
         io.emit('tactile_status', { connected: true, ...tactileInfo });
     });
 
+    socket.on('register_follower', (info) => {
+        console.log(`Follower arm terhubung: ${socket.id}`, info);
+    });
+
+    socket.on('follower_state_from_arm', (data) => {
+        io.volatile.emit('follower_state_to_browser', data);
+    });
+
     socket.on('tactile_from_sensor', (data) => {
         // volatile: drop frames for slow browsers instead of queueing them
         io.volatile.emit('tactile_to_browser', data);
