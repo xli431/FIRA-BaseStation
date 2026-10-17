@@ -7,6 +7,12 @@ as `tactile_to_browser`. Listens for `tactile_command_to_sensor` (e.g. tare).
     python tools/xense_bridge.py                   # real sensor, first one found
     python tools/xense_bridge.py --serial OG000741
     python tools/xense_bridge.py --fake            # synthetic data, no hardware
+    python tools/xense_bridge.py --record episodes/press-01            # also save an episode
+    python tools/xense_bridge.py --record episodes/press-01 --no-server  # save only
+
+A recorded episode (schema xense-tactile-v1, see xense_episode.py) can be loaded
+into FiftyOne with load_fiftyone_tactile.py or replayed in robosimstudio with
+robosim_tactile.py.
 """
 import argparse
 import base64
@@ -17,18 +23,12 @@ import cv2
 import numpy as np
 import socketio
 
-FORCE_LABELS = ["Fx", "Fy", "Fz", "Mx", "My", "Mz"]
+from xense_episode import FORCE_LABELS, EpisodeRecorder, default_episode_id, depth_to_color
 
 
 def encode_jpeg(img, quality=70):
     ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, quality])
     return base64.b64encode(buf).decode("ascii") if ok else None
-
-
-def depth_to_color(depth, depth_scale):
-    """Fixed scale (0..depth_scale) so a resting sensor stays dark instead of amplifying noise."""
-    d = np.clip(np.asarray(depth, dtype=np.float32).squeeze() / depth_scale, 0.0, 1.0)
-    return cv2.applyColorMap((d * 255).astype(np.uint8), cv2.COLORMAP_JET)
 
 
 def shrink(img, width):
@@ -117,10 +117,28 @@ def main():
     ap.add_argument("--depth-scale", type=float, default=0.5, help="depth shown as full colour")
     ap.add_argument("--contact-force", type=float, default=0.5, help="|Fz| above this counts as contact")
     ap.add_argument("--fake", action="store_true", help="send synthetic data instead of reading a sensor")
+    ap.add_argument("--record", default=None, help="save an episode to this new directory")
+    ap.add_argument("--episode-id", default=None, help="episode id in the manifest (default: serial + time)")
+    ap.add_argument("--no-server", action="store_true", help="do not connect to the base station")
     args = ap.parse_args()
+    if args.no_server and not args.record:
+        ap.error("--no-server without --record does nothing")
 
     source = FakeSource() if args.fake else XenseSource(args.serial)
     print(f"Sensor {source.serial} ready")
+
+    recorder = None
+    if args.record:
+        recorder = EpisodeRecorder(
+            args.record,
+            episode_id=args.episode_id or default_episode_id(source.serial),
+            serial=source.serial,
+            data_kind="synthetic_fixture" if args.fake else "real",
+            force_hz=args.hz,
+            image_hz=args.img_hz,
+            depth_scale=args.depth_scale,
+        )
+        print(f"Recording to {recorder.folder}")
 
     pending = []
     sio = socketio.Client(reconnection=True, reconnection_delay=1)
@@ -138,7 +156,8 @@ def main():
     def on_command(data):
         pending.append(data)  # handled in the main loop so the sensor is used from one thread
 
-    connect_with_retry(sio, args.server)
+    if not args.no_server:
+        connect_with_retry(sio, args.server)
 
     period = 1.0 / args.hz
     img_period = 1.0 / args.img_hz
@@ -180,6 +199,11 @@ def main():
 
             if sio.connected:
                 sio.emit("tactile_from_sensor", msg)
+            if recorder:
+                recorder.write(
+                    t_start, force, msg["depth_max"], msg["contact"],
+                    depth=depth if with_images else None, rectify=rectify,
+                )
 
             n += 1
             if t_start - fps_t0 >= 1.0:
@@ -190,6 +214,9 @@ def main():
         pass
     finally:
         source.release()
+        if recorder:
+            recorder.close()
+            print(f"Saved {recorder.n_frames} frames, {recorder.n_images} images to {recorder.folder}")
         if sio.connected:
             sio.disconnect()
 
