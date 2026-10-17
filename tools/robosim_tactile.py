@@ -28,6 +28,7 @@ import argparse
 import base64
 import bisect
 import math
+import threading
 import time
 
 import cv2
@@ -68,6 +69,20 @@ def rpy_to_mat(roll, pitch, yaw):
     return rz @ ry @ rx
 
 
+def connect_in_background(sio, url):
+    """Keep trying to reach the base station from a thread, so the studio starts whether or not it is up yet."""
+    import socketio
+
+    def run():
+        while not sio.connected:
+            try:
+                sio.connect(url, wait_timeout=5)
+            except socketio.exceptions.ConnectionError:
+                time.sleep(2)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 class LiveSource:
     """Latest message from the base station. Callbacks only assign; decoding happens on the studio's thread."""
 
@@ -86,7 +101,7 @@ class LiveSource:
         sio.on("disconnect", lambda: setattr(self, "connected", False))
         sio.on("tactile_to_browser", lambda data: setattr(self, "msg", data))
         sio.on("tactile_status", lambda data: setattr(self, "sensor", data))
-        sio.connect(url, wait=False)
+        connect_in_background(sio, url)
         self.sio = sio
 
     def status(self):

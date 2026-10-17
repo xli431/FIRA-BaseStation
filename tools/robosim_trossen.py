@@ -130,7 +130,7 @@ class FollowerSource:
         sio.on("connect", lambda: setattr(self, "connected", True))
         sio.on("disconnect", lambda: setattr(self, "connected", False))
         sio.on("follower_state_to_browser", self._on_state)
-        sio.connect(url, wait=False)
+        rt.connect_in_background(sio, url)
         self.sio = sio
 
     def _on_state(self, data):
