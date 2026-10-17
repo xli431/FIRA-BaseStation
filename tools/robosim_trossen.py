@@ -26,7 +26,7 @@ What is not measured and is stated as such: the Xense pad's position and size
 on the finger (--xense-offset, --xense-size; visual only, no collider), the
 sensor-to-finger rotation (--mount-rpy, default: gel normal facing the other
 finger), the gripper pad dimensions (left 0, robosimstudio's convention for
-unmeasured), servo gains (robosimstudio defaults) and where the base stands
+unmeasured), servo gains (chosen to hold the arm, not system-identified) and where the base stands
 (--base). The mirror sets joint *targets*; the simulated arm reaches them
 through its own PD servo, so it lags the real arm and can be stopped by
 contact the real arm did not meet.
@@ -85,7 +85,7 @@ def prepare_urdf(description, out_dir, xense_offset, xense_size):
 
 def register(rss, urdf, base):
     from robosimstudio.robots import register_embodiment, register_gripper
-    from robosimstudio.specs import GripperSpec
+    from robosimstudio.specs import ActuationSpec, GripperSpec
 
     register_gripper(
         GripperSpec(
@@ -111,6 +111,13 @@ def register(rss, urdf, base):
             urdf=str(urdf),
             base_offset=(*base, 0.0, 0.0, 0.0, 1.0),
             hull_colliders=True,
+            # A URDF carries no <position> actuators: without these the targets are
+            # ignored and the arm folds under gravity. Effort ceilings are the URDF's.
+            gravcomp=True,
+            arm_actuation=ActuationSpec(target_ke=300.0, target_kd=30.0, armature=0.01,
+                                        effort_limit_per_dof=(27.0, 27.0, 27.0, 7.0, 7.0, 7.0)),
+            gripper_actuation=ActuationSpec(target_ke=2000.0, target_kd=100.0, armature=0.005, effort_limit=400.0),
+            color=(0.12, 0.12, 0.13),
             arms=(rss.ArmSpec(name=ARM, joint_names=JOINTS, ee_body_name="link_6",
                               gripper="trossen_wxai_v0", home_q=HOME_Q),),
         )

@@ -139,7 +139,7 @@ leader home pose.
 face, visual only, no collider, so it does not change grasp physics), the
 sensor-to-finger rotation (`--mount-rpy`, default gel normal facing the other
 finger), gripper pad dimensions (0, robosimstudio's convention for unmeasured),
-servo gains (robosimstudio defaults), and where the base stands (`--base`).
+servo gains (chosen to hold the arm against gravity, not system-identified; effort ceilings are the URDF's), and where the base stands (`--base`).
 The mirror writes joint *targets*; the simulated arm follows through its own
 servo, lags the real one, and can be blocked by simulated contact the real arm
 never met.
