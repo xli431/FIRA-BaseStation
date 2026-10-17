@@ -1,0 +1,4 @@
+xensesdk
+python-socketio[client]>=5
+opencv-python
+numpy

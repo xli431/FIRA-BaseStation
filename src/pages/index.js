@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import Head from 'next/head';
 import TabButton from '../components/TabButton';
 import ParameterInput from '../components/ParameterInput';
+import TactilePanel from '../components/TactilePanel';
 
 const PARAMETER_GROUPS = {
     'PID': ['kp', 'ki', 'kd'],
@@ -19,6 +20,8 @@ let socket;
 export default function HomePage() {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [telemetry, setTelemetry] = useState(null);
+    const [tactile, setTactile] = useState(null);
+    const [tactileStatus, setTactileStatus] = useState(null);
 
     useEffect(() => {
         socket = io();
@@ -31,6 +34,14 @@ export default function HomePage() {
             setTelemetry(data);
         });
 
+        socket.on('tactile_to_browser', (data) => {
+            setTactile(data);
+        });
+
+        socket.on('tactile_status', (data) => {
+            setTactileStatus(data);
+        });
+
         return () => {
             socket.disconnect();
         };
@@ -38,6 +49,7 @@ export default function HomePage() {
 
     const sendCommand = (action, payload = null) => socket.emit('command_from_browser', { action, payload });
     const sendParamUpdate = (name, value) => socket.emit('param_update_from_browser', { name, value });
+    const sendTactileCommand = (action) => socket.emit('tactile_command_from_browser', { action });
 
     return (
         <>
@@ -51,6 +63,7 @@ export default function HomePage() {
                     <TabButton isActive={activeTab === 'tuning'} onClick={() => setActiveTab('tuning')}>Tuning Parameter</TabButton>
                     <TabButton isActive={activeTab === 'mission'} onClick={() => setActiveTab('mission')}>Path</TabButton>
                     <TabButton isActive={activeTab === 'diagnostics'} onClick={() => setActiveTab('diagnostics')}>Diagnostik</TabButton>
+                    <TabButton isActive={activeTab === 'tactile'} onClick={() => setActiveTab('tactile')}>Tactile</TabButton>
                 </div>
 
                 <div className="main-content">
@@ -123,6 +136,10 @@ export default function HomePage() {
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {activeTab === 'tactile' && (
+                        <TactilePanel tactile={tactile} status={tactileStatus} onCommand={sendTactileCommand} />
                     )}
                 </div>
             </main>
