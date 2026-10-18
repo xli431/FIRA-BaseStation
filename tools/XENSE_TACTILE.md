@@ -102,7 +102,7 @@ git clone https://github.com/TrossenRobotics/trossen_arm_description.git ~/tross
 
 # 1. follower joints -> base station (read-only; see below)
 uv pip install trossen-arm "python-socketio[client]"
-python tools/trossen_joint_bridge.py --ip <follower-ip>          # or --fake to test
+python tools/trossen_joint_bridge.py --fake                      # check the page; real joints: see below
 
 # 2. Xense -> base station
 python tools/xense_bridge.py --serial OG000741
@@ -117,11 +117,10 @@ uv run --with "python-socketio[client]" --with opencv-python-headless \
 Tick **Mirror real follower** to drive the simulated arm from the real one; untick,
 or let the stream stop for 0.5 s, and the arm goes back to its gizmo where it is.
 
-**Reading the follower.** `trossen_joint_bridge.py` calls only `configure()` and
-`get_all_positions()`: no mode, position, velocity or effort is ever sent and
-errors are not cleared. Whether the controller accepts this second connection
-while your teleop program holds the first is not documented by Trossen. If it is
-refused, publish from inside the teleop loop instead:
+**Reading the follower.** No script here opens a driver connection: the official
+Trossen driver sets idle mode when a driver object is destroyed, so a second
+connection is not passive at exit. Publish from the teleop program that already
+owns the follower's driver:
 
 ```python
 from trossen_joint_bridge import JointStatePublisher

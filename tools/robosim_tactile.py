@@ -196,7 +196,6 @@ def make_page(sim, source, args, anchor=None):
         shown = {"rectify": None, "depth": None}
 
         def update():
-            nonlocal arrow
             status.value = source.label
             state.value = source.status()
             data = source.latest()
@@ -221,12 +220,8 @@ def make_page(sim, source, args, anchor=None):
             colour = (230, 80, 40) if data["contact"] else (200, 200, 200)
             visible = bool(show.value)
             points = np.asarray([[pos, end]], dtype=np.float32)
-            try:
-                arrow.points = points
-                arrow.colors = colour
-            except AttributeError:  # an older viser without settable segments
-                arrow.remove()
-                arrow = scene.add_line_segments("/xense/force", points=points, colors=colour, line_width=4.0)
+            arrow.points = points
+            arrow.colors = np.full((1, 2, 3), colour, np.uint8)  # viser casts only arrays here
             arrow.visible = visible
             tip.position = tuple(end)
             tip.color = colour

@@ -4,21 +4,16 @@
 Emits `follower_state_from_arm` to server.js, which relays it as
 `follower_state_to_browser`; robosim_trossen.py mirrors it onto the simulated arm.
 
-**Read-only.** This calls TrossenArmDriver.configure() and get_all_positions()
-and nothing else: it never sets a mode, a position, a velocity or an effort, and
-it does not clear errors. Per Trossen's docs configure() opens the connection
-and does not change joint modes.
-
-Whether the arm controller accepts a second connection while your teleop
-program holds one is not documented. If this script cannot connect while
-teleop runs, use JointStatePublisher inside the teleop loop instead:
+This script opens no driver connection. The official Trossen driver sets idle
+mode when a TrossenArmDriver is destroyed, so a second "read-only" connection
+is not passive at exit and could idle an arm your teleop program is holding.
+Publish from the program that already owns the follower's driver:
 
     from trossen_joint_bridge import JointStatePublisher
     pub = JointStatePublisher("http://localhost:3000")
     ...  # in the loop, after reading the follower:
     pub.send(follower_driver.get_all_positions())
 
-    python tools/trossen_joint_bridge.py --ip 192.168.1.3
     python tools/trossen_joint_bridge.py --fake          # a slow wave, no hardware
 """
 import argparse
@@ -66,20 +61,6 @@ class JointStatePublisher:
             self.sio.disconnect()
 
 
-class TrossenReader:
-    def __init__(self, ip):
-        import trossen_arm
-
-        self.driver = trossen_arm.TrossenArmDriver()
-        # clear_error=False: reading must not change the controller's state.
-        self.driver.configure(trossen_arm.Model.wxai_v0, trossen_arm.StandardEndEffector.wxai_v0_follower, ip, False)
-
-    def read(self):
-        return list(self.driver.get_all_positions())
-
-    def close(self):
-        pass  # no cleanup(): Trossen's cleanup paths move the arm home
-
 
 class FakeReader:
     def __init__(self):
@@ -103,14 +84,12 @@ class FakeReader:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    src = ap.add_mutually_exclusive_group(required=True)
-    src.add_argument("--ip", help="follower arm controller IP")
-    src.add_argument("--fake", action="store_true", help="send a slow joint wave instead of reading an arm")
+    ap.add_argument("--fake", action="store_true", required=True, help="send a slow synthetic joint wave")
     ap.add_argument("--server", default="http://localhost:3000")
     ap.add_argument("--hz", type=float, default=50.0)
     args = ap.parse_args()
 
-    reader = FakeReader() if args.fake else TrossenReader(args.ip)
+    reader = FakeReader()
     pub = JointStatePublisher(args.server)
     print("Streaming follower joints; Ctrl+C to stop")
     period = 1.0 / args.hz
